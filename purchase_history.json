@@ -1,1 +1,20 @@
-
+{
+  "decaymeat": {
+    "telegram_id": 6477425913,
+    "first_purchase_at": "2026-07-09 14:31",
+    "purchases": [
+      {
+        "plan": "Sales Bot",
+        "price": "149 تومان",
+        "phone": "09918220074",
+        "email": "sdad@13123123213.123123",
+        "field": "تکنولوژی",
+        "method": "Crypto USDT (ERC-20)",
+        "reference": "21322222222",
+        "botDesc": "21322222222WSSS",
+        "approved_at": "2026-07-09 14:31",
+        "expires_at": "2026-08-08"
+      }
+    ]
+  }
+}
