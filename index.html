@@ -567,8 +567,12 @@ footer p{color:var(--dim);font-size:.8rem;line-height:1.8;}
 
     <form id="checkout-form" onsubmit="handleCheckout(event)" class="modal-form">
 
-      <!-- ⚠️ به‌جای فیلد دستی یوزرنیم، خود تلگرام هویت خریدار رو تضمین میکنه -->
-      <div id="identity-box"></div>
+      <!-- یوزرنیم — پیش‌فرض از خود تلگرام پر میشه، ولی قابل ویرایش دستیه -->
+      <div class="field-wrap">
+        <label class="field-label" for="tg-username">Telegram Username *</label>
+        <input class="field-input" id="tg-username" type="text" placeholder="@username" required>
+        <div class="field-sub" id="username-hint"></div>
+      </div>
 
       <div class="field-wrap">
         <label class="field-label" for="phone">Phone *</label>
@@ -668,42 +672,20 @@ const tgUser = tg?.initDataUnsafe?.user;
 const username = tgUser?.username || "";
 
 function renderIdentityBox() {
-  const box = document.getElementById('identity-box');
+  const input = document.getElementById('tg-username');
+  const hint = document.getElementById('username-hint');
 
   if (!tg) {
-    // اسکریپت telegram-web-app.js لود نشده یا صفحه بیرون از تلگرام بازشده
-    box.innerHTML = `<div class="identity-pill warn">
-      <span class="dot"></span> Telegram WebApp script did not load
-      (check your internet/VPN connection, or open this page from inside the bot).
-    </div>`;
-    document.getElementById('submit-btn').disabled = true;
+    hint.textContent = "⚠️ Telegram WebApp script did not load — open this page from inside the bot.";
     return;
   }
 
   if (username) {
-    box.innerHTML = `<div class="identity-pill">
-      <span class="dot"></span> Ordering as <b>@${username}</b>
-    </div>`;
+    input.value = '@' + username;
+    hint.textContent = "Auto-filled from your Telegram account — edit if needed.";
   } else {
-    box.innerHTML = `<div class="identity-pill warn">
-      <span class="dot"></span> Telegram loaded, but no username came through.
-      Go to Telegram Settings → Username, set one, then reopen this page.
-    </div>`;
-    document.getElementById('submit-btn').disabled = true;
+    hint.textContent = "Couldn't auto-detect your username (normal on Telegram Desktop) — please type it yourself.";
   }
-
-  // ⚠️ پنل دیباگ موقت — بعد از رفع مشکل حذفش کن.
-  // پایین صفحه یه جعبه‌ی کوچیک نشون می‌ده که دقیقاً تلگرام چی برگردونده.
-  const debugBox = document.createElement('div');
-  debugBox.style.cssText = 'margin-top:10px;padding:10px;background:#000;border:1px dashed #444;border-radius:8px;font-size:10px;color:#7cffb2;white-space:pre-wrap;word-break:break-all;direction:ltr;text-align:left;';
-  debugBox.textContent =
-    'DEBUG\n' +
-    'tg exists: ' + !!tg + '\n' +
-    'platform: ' + (tg?.platform || '—') + '\n' +
-    'version: ' + (tg?.version || '—') + '\n' +
-    'initData length: ' + (tg?.initData?.length || 0) + '\n' +
-    'initDataUnsafe.user: ' + JSON.stringify(tg?.initDataUnsafe?.user || null);
-  box.appendChild(debugBox);
 }
 
 /* ── Modal ── */
@@ -734,7 +716,7 @@ function showToast(msg, type = 'success') {
 
 /* ── Submit state ── */
 function setLoading(on) {
-  document.getElementById('submit-btn').disabled = on || !username;
+  document.getElementById('submit-btn').disabled = on;
   document.getElementById('submit-label').style.display = on ? 'none' : 'inline';
   document.getElementById('submit-spinner').style.display = on ? 'flex' : 'none';
 }
@@ -746,17 +728,21 @@ function setLoading(on) {
 function handleCheckout(e) {
   e.preventDefault();
 
-  if (!username) {
-    showToast('⚠️ Set a Telegram username first.', 'error');
-    return;
-  }
   if (!tg) {
     showToast('⚠️ This page must be opened inside Telegram.', 'error');
     return;
   }
 
+  let typedUsername = document.getElementById('tg-username').value.trim();
+  if (!typedUsername.startsWith('@')) typedUsername = '@' + typedUsername.replace(/^@+/, '');
+  if (typedUsername.length < 2) {
+    showToast('⚠️ Enter a valid Telegram username.', 'error');
+    document.getElementById('tg-username').focus();
+    return;
+  }
+
   const order = {
-    username: '@' + username,
+    username: typedUsername,   // اگه خالی/اشتباه بمونه، پایتون از خود پیام تلگرام جایگزینش میکنه
     phone:    document.getElementById('phone').value.trim(),
     email:    document.getElementById('email').value.trim(),
     field:    document.getElementById('field-work').value,
