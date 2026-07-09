@@ -669,17 +669,41 @@ const username = tgUser?.username || "";
 
 function renderIdentityBox() {
   const box = document.getElementById('identity-box');
+
+  if (!tg) {
+    // اسکریپت telegram-web-app.js لود نشده یا صفحه بیرون از تلگرام بازشده
+    box.innerHTML = `<div class="identity-pill warn">
+      <span class="dot"></span> Telegram WebApp script did not load
+      (check your internet/VPN connection, or open this page from inside the bot).
+    </div>`;
+    document.getElementById('submit-btn').disabled = true;
+    return;
+  }
+
   if (username) {
     box.innerHTML = `<div class="identity-pill">
       <span class="dot"></span> Ordering as <b>@${username}</b>
     </div>`;
   } else {
     box.innerHTML = `<div class="identity-pill warn">
-      <span class="dot"></span> Your Telegram account has no username set.
+      <span class="dot"></span> Telegram loaded, but no username came through.
       Go to Telegram Settings → Username, set one, then reopen this page.
     </div>`;
     document.getElementById('submit-btn').disabled = true;
   }
+
+  // ⚠️ پنل دیباگ موقت — بعد از رفع مشکل حذفش کن.
+  // پایین صفحه یه جعبه‌ی کوچیک نشون می‌ده که دقیقاً تلگرام چی برگردونده.
+  const debugBox = document.createElement('div');
+  debugBox.style.cssText = 'margin-top:10px;padding:10px;background:#000;border:1px dashed #444;border-radius:8px;font-size:10px;color:#7cffb2;white-space:pre-wrap;word-break:break-all;direction:ltr;text-align:left;';
+  debugBox.textContent =
+    'DEBUG\n' +
+    'tg exists: ' + !!tg + '\n' +
+    'platform: ' + (tg?.platform || '—') + '\n' +
+    'version: ' + (tg?.version || '—') + '\n' +
+    'initData length: ' + (tg?.initData?.length || 0) + '\n' +
+    'initDataUnsafe.user: ' + JSON.stringify(tg?.initDataUnsafe?.user || null);
+  box.appendChild(debugBox);
 }
 
 /* ── Modal ── */
