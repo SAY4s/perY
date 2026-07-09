@@ -4,6 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>pery — Telegram Bots, Built for You</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
@@ -68,6 +69,7 @@ nav{position:sticky;top:0;z-index:50;
 .btn-ghost{background:transparent;border:1px solid var(--border);
   color:var(--text);padding:.7rem 1.4rem;font-size:.92rem;}
 .btn-ghost:hover{border-color:var(--blue);color:#fff;}
+.btn:disabled{opacity:.5;cursor:not-allowed;}
 
 /* ── Hero ── */
 .hero{padding:7rem 1.5rem 5rem;text-align:center;overflow:hidden;position:relative;}
@@ -229,6 +231,16 @@ textarea.field-input{resize:vertical;min-height:90px;}
   display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;}
 .close-btn:hover{background:rgba(255,255,255,.1);color:#fff;}
 
+/* ── Identity pill (به‌جای فیلد یوزرنیم دستی — از خود تلگرام میاد) ── */
+.identity-pill{
+  display:flex;align-items:center;gap:.6rem;
+  background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.25);
+  border-radius:10px;padding:.7rem 1rem;margin-bottom:1rem;font-size:.85rem;
+}
+.identity-pill .dot{width:8px;height:8px;border-radius:50%;background:#22c55e;flex-shrink:0;}
+.identity-pill.warn{background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.3);color:#fca5a5;}
+.identity-pill.warn .dot{background:#ef4444;}
+
 /* ── Spin / Toast ── */
 .spin{display:inline-block;width:16px;height:16px;
   border:2px solid rgba(255,255,255,.2);border-top-color:#fff;
@@ -255,17 +267,6 @@ footer p{color:var(--dim);font-size:.8rem;line-height:1.8;}
 </head>
 <body>
 
-<!-- CONFIG -->
-<script>
-  /*
-   * ⚠️  هشدار امنیتی: این توکن در سورس صفحه قابل مشاهده است.
-   * برای محیط production، درخواست را از طریق یک سرور میانی بفرستید.
-   */
-  const TELEGRAM_BOT_TOKEN  = '8725654335:AAExIju-h1mMLzEiOzpvla3KzWKPbE004kM';   // ← عوض کن
-  const ADMIN_CHAT_ID       = '7633207763';         // ← عوض کن
-  const ARCHIVE_CHANNEL_ID  = '-1004367162018';       // ← عوض کن
-</script>
-
 <!-- NAVBAR -->
 <nav>
   <div class="nav-inner">
@@ -288,7 +289,6 @@ footer p{color:var(--dim);font-size:.8rem;line-height:1.8;}
 
 <!-- HERO -->
 <section class="hero">
-  <!-- Ambient bot-grid background -->
   <div class="hero-grid" aria-hidden="true" id="hero-grid"></div>
 
   <div class="glow" style="width:500px;height:400px;background:rgba(59,130,246,.14);top:-120px;left:50%;transform:translateX(-50%);"></div>
@@ -319,7 +319,6 @@ footer p{color:var(--dim);font-size:.8rem;line-height:1.8;}
       </button>
     </div>
 
-    <!-- Quick stats -->
     <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:2.5rem;padding-top:1rem;">
       <div style="text-align:center;">
         <div class="display" style="font-size:2rem;color:#fff;">5</div>
@@ -568,15 +567,12 @@ footer p{color:var(--dim);font-size:.8rem;line-height:1.8;}
 
     <form id="checkout-form" onsubmit="handleCheckout(event)" class="modal-form">
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem;margin-bottom:1rem;">
-        <div class="field-wrap" style="margin:0;">
-          <label class="field-label" for="tg-username">Telegram Username *</label>
-          <input class="field-input" id="tg-username" type="text" placeholder="@username" required oninput="this.value=this.value.trim()">
-        </div>
-        <div class="field-wrap" style="margin:0;">
-          <label class="field-label" for="phone">Phone *</label>
-          <input class="field-input" id="phone" type="tel" placeholder="+98 912…" required>
-        </div>
+      <!-- ⚠️ به‌جای فیلد دستی یوزرنیم، خود تلگرام هویت خریدار رو تضمین میکنه -->
+      <div id="identity-box"></div>
+
+      <div class="field-wrap">
+        <label class="field-label" for="phone">Phone *</label>
+        <input class="field-input" id="phone" type="tel" placeholder="+98 912…" required>
       </div>
 
       <div class="field-wrap">
@@ -659,13 +655,39 @@ footer p{color:var(--dim);font-size:.8rem;line-height:1.8;}
   }
 })();
 
+/* ───────────────────────────────────────────────
+ *  تلگرام Mini App
+ *  ⚠️ برخلاف نسخه‌ی قبلی این سایت، اینجا هیچ توکن باتی توی کد نیست.
+ *  سفارش از طریق Telegram.WebApp.sendData() مستقیم به خودِ بات پایتون
+ *  (perSub-Frosh.py) میره؛ اون‌جا با ADMIN_CHAT_ID و ذخیره روی گیت‌هاب
+ *  مدیریت میشه. یوزرنیم خریدار هم مستقیم از خودِ تلگرام گرفته میشه،
+ *  نه از یک اینپوت متنی قابل جعل.
+ * ─────────────────────────────────────────────── */
+const tg = window.Telegram?.WebApp;
+const tgUser = tg?.initDataUnsafe?.user;
+const username = tgUser?.username || "";
+
+function renderIdentityBox() {
+  const box = document.getElementById('identity-box');
+  if (username) {
+    box.innerHTML = `<div class="identity-pill">
+      <span class="dot"></span> Ordering as <b>@${username}</b>
+    </div>`;
+  } else {
+    box.innerHTML = `<div class="identity-pill warn">
+      <span class="dot"></span> Your Telegram account has no username set.
+      Go to Telegram Settings → Username, set one, then reopen this page.
+    </div>`;
+    document.getElementById('submit-btn').disabled = true;
+  }
+}
+
 /* ── Modal ── */
 function openModal(planName, planPrice) {
   document.getElementById('modal-plan-name').textContent = planName;
   document.getElementById('modal-plan-price').textContent = planPrice;
   document.getElementById('modal-overlay').classList.add('open');
   document.body.style.overflow = 'hidden';
-  setTimeout(() => document.getElementById('tg-username').focus(), 320);
 }
 function closeModal() {
   document.getElementById('modal-overlay').classList.remove('open');
@@ -688,90 +710,53 @@ function showToast(msg, type = 'success') {
 
 /* ── Submit state ── */
 function setLoading(on) {
-  document.getElementById('submit-btn').disabled = on;
+  document.getElementById('submit-btn').disabled = on || !username;
   document.getElementById('submit-label').style.display = on ? 'none' : 'inline';
   document.getElementById('submit-spinner').style.display = on ? 'flex' : 'none';
 }
 
-/* ── Telegram helpers ── */
-function escTg(str) {
-  return String(str || '—').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-async function tgSend(chatId, text, markup) {
-  const payload = { chat_id: chatId, text, parse_mode: 'HTML' };
-  if (markup) payload.reply_markup = markup;
-  const res = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  });
-  if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e.description || `HTTP ${res.status}`); }
-  return res.json();
-}
-
-/* ── Build messages ── */
-function buildAdminMsg(o) {
-  const D = '━━━━━━━━━━━━━━━━━━━━';
-  return `🤖 <b>New pery Order!</b>\n${D}\n`+
-    `👤 <b>Username:</b> ${escTg(o.username)}\n`+
-    `📞 <b>Phone:</b> ${escTg(o.phone)}\n`+
-    `📧 <b>Email:</b> ${escTg(o.email)}\n`+
-    `🏢 <b>Field:</b> ${escTg(o.field)}\n${D}\n`+
-    `📦 <b>Package:</b> ${escTg(o.plan)}\n`+
-    `💵 <b>Price:</b> ${escTg(o.price)}\n`+
-    `💳 <b>Method:</b> ${escTg(o.method)}\n`+
-    `🧾 <b>Receipt:</b> ${escTg(o.reference)}\n${D}\n`+
-    `📝 <b>Requirements:</b>\n${escTg(o.botDesc)}\n${D}`;
-}
-function buildArchiveMsg(o) {
-  return `📦 <b>pery Order</b>\n──────────────\n`+
-    `${escTg(o.username)} · ${escTg(o.phone)}\n${escTg(o.email)}\n`+
-    `${escTg(o.plan)} · ${escTg(o.price)}\n${escTg(o.method)} · ${escTg(o.reference)}\n`+
-    `📝 ${escTg(o.botDesc)}`;
-}
-function buildKeyboard(username) {
-  const u = username.replace(/^@/,'');
-  return { inline_keyboard: [
-    [{ text:'✅ Confirm Order', callback_data:`approve_${u}` },
-     { text:'❌ Reject',        callback_data:`reject_${u}` }],
-    [{ text:'💬 Contact Buyer', url:`https://t.me/${u}` }]
-  ]};
-}
-
-/* ── Form submit ── */
-async function handleCheckout(e) {
+/* ───────────────────────────────────────────────
+ *  ارسال سفارش — دقیقاً همون شکلی که perSub-Frosh.py انتظار داره:
+ *  { username, phone, email, field, plan, price, method, reference, botDesc }
+ * ─────────────────────────────────────────────── */
+function handleCheckout(e) {
   e.preventDefault();
-  const username  = document.getElementById('tg-username').value.trim();
-  const phone     = document.getElementById('phone').value.trim();
-  const email     = document.getElementById('email').value.trim();
-  const field     = document.getElementById('field-work').value;
-  const method    = document.getElementById('pay-method').value;
-  const reference = document.getElementById('tx-ref').value.trim();
-  const botDesc   = document.getElementById('bot-desc').value.trim();
-  const plan      = document.getElementById('modal-plan-name').textContent;
-  const price     = document.getElementById('modal-plan-price').textContent;
 
-  if (!username.startsWith('@')) {
-    showToast('⚠️ Telegram username must start with @', 'error');
-    document.getElementById('tg-username').focus();
+  if (!username) {
+    showToast('⚠️ Set a Telegram username first.', 'error');
     return;
   }
-  if (!TELEGRAM_BOT_TOKEN || TELEGRAM_BOT_TOKEN.includes('YOUR_')) {
-    showToast('⚙️ Bot token not configured.', 'error'); return;
+  if (!tg) {
+    showToast('⚠️ This page must be opened inside Telegram.', 'error');
+    return;
   }
 
+  const order = {
+    username: '@' + username,
+    phone:    document.getElementById('phone').value.trim(),
+    email:    document.getElementById('email').value.trim(),
+    field:    document.getElementById('field-work').value,
+    method:   document.getElementById('pay-method').value,
+    reference:document.getElementById('tx-ref').value.trim(),
+    botDesc:  document.getElementById('bot-desc').value.trim(),
+    plan:     document.getElementById('modal-plan-name').textContent,
+    price:    document.getElementById('modal-plan-price').textContent,
+  };
+
   setLoading(true);
-  const o = { username, phone, email, field, method, reference, botDesc, plan, price };
-  try {
-    await tgSend(ADMIN_CHAT_ID, buildAdminMsg(o), buildKeyboard(username));
-    try { await tgSend(ARCHIVE_CHANNEL_ID, buildArchiveMsg(o)); } catch(_) {}
-    showToast('✅ Order placed! We\'ll be in touch shortly.');
-    closeModal();
-  } catch(err) {
-    console.error(err);
-    showToast('❌ Failed to send. Check bot token / chat ID.', 'error');
-    setLoading(false);
-  }
+  tg.sendData(JSON.stringify(order));
+  // sendData بستن Mini App رو خودش انجام میده؛ ولی برای اطمینان:
+  setTimeout(() => tg.close(), 300);
 }
+
+/* ── Init ── */
+(function init() {
+  if (tg) {
+    tg.ready();
+    tg.expand();
+  }
+  renderIdentityBox();
+})();
 </script>
 </body>
 </html>
